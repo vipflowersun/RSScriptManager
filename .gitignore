@@ -1,0 +1,14 @@
+﻿# This file is used to ignore files which are generated
+# ----------------------------------------------------------------------------
+
+
+.vs/
+.vscode/
+/out/
+/bin/
+/build/
+/thirdParty/opencv/
+/thirdParty/PCL 1.15.0/
+/thirdParty/Qt5.15.2/bin/Qt5WebEngineCored.dll
+/thirdParty/Qt5.15.2/bin/Qt5WebEngineCore.dll
+module/**/*.pdb
