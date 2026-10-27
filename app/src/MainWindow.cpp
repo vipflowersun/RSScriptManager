@@ -4,6 +4,8 @@
 #include "ScriptManager.h"
 
 #include <QFileDialog>
+#include <QTimer>
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget* parent)
     : QWidget(parent)
@@ -16,7 +18,11 @@ MainWindow::MainWindow(QWidget* parent)
 	ScriptManager::RobotFtp robotFtp;
 	robotFtp.robotIp = _ui->editRobotIP->text().toStdString();
 	robotFtp.IPCIp = _ui->editPCIP->text().toStdString();
-	_scriptManager->setRobotsFtp({ robotFtp });
+	_scriptManager->setRobotFtp(robotFtp);
+
+	QTimer* timer = new QTimer(this);
+	timer->setInterval(50);
+	//timer->start();
 
     connect(_ui->btnReset, &QPushButton::clicked, this, [this]() {
 		QString dir = QFileDialog::getExistingDirectory(this, tr("Select Script Root Directory"), QString(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
@@ -31,16 +37,29 @@ MainWindow::MainWindow(QWidget* parent)
 			_ui->listScript->addItem(item);
 		}
     });
+	connect(_ui->btnRunSelect, &QPushButton::clicked, this, [this]() {
+		int index = _ui->listScript->currentRow();
+		if (index < 0)
+			return;
+		qDebug() << "runCertainScript: " << _scriptManager->runCertainScript(index);
+	});
 	connect(_ui->editRobotIP, &QLineEdit::editingFinished, this, [this]() {
 		ScriptManager::RobotFtp robotFtp;
 		robotFtp.robotIp = _ui->editRobotIP->text().toStdString();
 		robotFtp.IPCIp = _ui->editPCIP->text().toStdString();
-		_scriptManager->setRobotsFtp({ robotFtp });
+		_scriptManager->setRobotFtp(robotFtp);
 	});
 	connect(_ui->editPCIP, &QLineEdit::editingFinished, this, [this]() {
 		ScriptManager::RobotFtp robotFtp;
 		robotFtp.robotIp = _ui->editRobotIP->text().toStdString();
 		robotFtp.IPCIp = _ui->editPCIP->text().toStdString();
-		_scriptManager->setRobotsFtp({ robotFtp });
+		_scriptManager->setRobotFtp(robotFtp);
+	});
+	connect(timer, &QTimer::timeout, this, [this]() {
+		bool running = false;
+		if (_scriptManager->isScriptRunning(running) == 0)
+			_ui->editScriptRunning->setText(running ? "1" : "0");
+		else
+			_ui->editScriptRunning->setText("Error");
 	});
 }

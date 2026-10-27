@@ -27,7 +27,6 @@ static std::vector<std::string> splitNoEmpty(const std::string& s, char delim)
 
 FtpClient::FtpClient()
 {
-    curl_global_init(CURL_GLOBAL_DEFAULT);
 }
 
 FtpClient::~FtpClient() = default;

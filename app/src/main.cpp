@@ -4,11 +4,16 @@
 #include <QMessageBox>
 #include <QDebug>
 
+#include "curl/curl.h"
+
+#include <cstdio>
 #include <filesystem>
 
-#if defined(_WIN32) && defined(NDEBUG)
+#if defined(_WIN32)
 #include <windows.h>
+#if defined(NDEBUG)
 #include <dbghelp.h>
+#endif
 #endif
 
 #include "MainWindow.h"
@@ -87,6 +92,33 @@ static void customMessageHandler(QtMsgType type, const QMessageLogContext& conte
 
 int main(int argc, char* argv[])
 {
+#if defined(_WIN32)
+    if (AllocConsole() || GetLastError() == ERROR_ACCESS_DENIED) {
+        FILE* stream = nullptr;
+        const auto inputResult = freopen_s(&stream, "CONIN$", "r", stdin);
+        const auto outputResult = freopen_s(&stream, "CONOUT$", "w", stdout);
+        const auto errorResult = freopen_s(&stream, "CONOUT$", "w", stderr);
+        SetConsoleCP(CP_UTF8);
+        SetConsoleOutputCP(CP_UTF8);
+        SetConsoleTitleW(L"RSScriptManager Console");
+        qputenv("QT_FORCE_STDERR_LOGGING", "1");
+        if (inputResult != 0 || outputResult != 0 || errorResult != 0)
+            qWarning() << "Failed to redirect console streams";
+    } else {
+        qWarning() << "Failed to create console, Windows error:" << GetLastError();
+    }
+#endif
+
+    const CURLcode curlResult = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (curlResult != CURLE_OK) {
+        qCritical() << "libcurl initialization failed:" << curl_easy_strerror(curlResult);
+        return 1;
+    }
+    struct CurlGlobalCleanup
+    {
+        ~CurlGlobalCleanup() { curl_global_cleanup(); }
+    } curlGlobalCleanup;
+
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     QGuiApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))

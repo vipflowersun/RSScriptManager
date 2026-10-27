@@ -1,3 +1,4 @@
+/*ScriptReady: F[10](RW), ScriptRunning: F[11](RO)*/
 #pragma once
 #include <QObject>
 
@@ -16,7 +17,7 @@ public:
 	};
 	struct SrciptInfo
 	{
-		std::string name;
+		std::string name;  // 不带路径的脚本名
 		int status; // 0: idle, 1: running, 2: runned, 3: error
 	};
 public:
@@ -25,10 +26,10 @@ public:
 public:
     void setScriptRootDir(const std::string& scriptRootDir);
     std::string getScriptRootDir() const;
-	void setRobotsFtp(const std::vector<RobotFtp>& robotFtp);
-	std::vector<RobotFtp> getRobotsFtp() const;
+	void setRobotFtp(const RobotFtp& robotFtp);
+	RobotFtp getRobotFtp() const;
 	std::list<SrciptInfo> getScriptList() const;
-    int isScriptRunning(std::string& running) const;
+    int isScriptRunning(bool& running) const;
 	std::optional<std::string> getCurrentRunningScript() const;
 	int runAll();
 	int runCertainScript(int index);
@@ -38,9 +39,10 @@ signals:
 	void statusChanged(int status);  // 0: idle, 1: running, 2: error
 	void scriptListStatusChanged();
 private:
+	int uploadScript(int index);
     int sendScriptReady();  //通知机器人脚本就绪
 private:
 	std::string _scriptRootDir;
 	std::list<SrciptInfo> _scriptList;
-	std::vector<RobotFtp> _robotsFtp;
+	RobotFtp _robotFtp;
 };
