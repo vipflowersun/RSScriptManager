@@ -10,6 +10,7 @@
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <QDebug>
 
 namespace {
@@ -35,6 +36,22 @@ size_t readScript(char* buffer, size_t size, size_t count, void* userdata)
 		return CURL_READFUNC_ABORT;
 	source.remaining -= static_cast<curl_off_t>(bytes);
 	return static_cast<size_t>(bytes);
+}
+
+size_t writeServerFileList(char* buffer, size_t size, size_t count, void* userdata)
+{
+	if (size == 0 || count == 0)
+		return 0;
+	if (count > std::numeric_limits<size_t>::max() / size)
+		return 0;
+	const auto bytes = size * count;
+	try {
+		static_cast<std::string*>(userdata)->append(buffer, bytes);
+	}
+	catch (...) {
+		return 0;
+	}
+	return bytes;
 }
 }
 
@@ -194,8 +211,9 @@ int ScriptManager::uploadScript(int index)
 	const auto setOption = [&](CURLoption option, auto value) {
 		if (optionResult == CURLE_OK)
 			optionResult = curl_easy_setopt(curl.get(), option, value);
-	};
+		};
 	setOption(CURLOPT_URL, url.c_str());
+	setOption(CURLOPT_PORT, 21L);
 	setOption(CURLOPT_PROXY, "");
 	setOption(CURLOPT_USERNAME, "anonymous");
 	setOption(CURLOPT_PASSWORD, "anonymous@");
@@ -204,10 +222,10 @@ int ScriptManager::uploadScript(int index)
 	setOption(CURLOPT_INFILESIZE_LARGE, source.remaining);
 	setOption(CURLOPT_READFUNCTION, &readScript);
 	setOption(CURLOPT_READDATA, &source);
-	setOption(CURLOPT_FTPPORT, _robotFtp.IPCIp.empty() ? "-" : _robotFtp.IPCIp.c_str());
-	setOption(CURLOPT_FTP_USE_EPRT, 0L);
+	// Disable active mode and use PASV for the robot FTP server.
+	setOption(CURLOPT_FTPPORT, static_cast<const char*>(nullptr));
+	setOption(CURLOPT_FTP_USE_EPSV, 0L);
 	setOption(CURLOPT_CONNECTTIMEOUT, 10L);
-	setOption(CURLOPT_ACCEPTTIMEOUT_MS, 10000L);
 	setOption(CURLOPT_TIMEOUT, 120L);
 	setOption(CURLOPT_NOSIGNAL, 1L);
 	if (optionResult != CURLE_OK) {
@@ -235,4 +253,62 @@ int ScriptManager::sendScriptReady()
 		return 0;
 	}
 	return -1;
+}
+
+void ScriptManager::printServerFileList()
+{
+	if (_robotFtp.robotIp.empty()) {
+		qWarning() << "FTP directory listing failed: robot IP is empty";
+		return;
+	}
+	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(), &curl_easy_cleanup);
+	if (!curl) {
+		qWarning() << "FTP directory listing failed: cannot create curl handle";
+		return;
+	}
+
+	const std::string url = "ftp://" + _robotFtp.robotIp + "//md:/";
+	std::string listing;
+	CURLcode optionResult = CURLE_OK;
+	const auto setOption = [&](CURLoption option, auto value) {
+		if (optionResult == CURLE_OK)
+			optionResult = curl_easy_setopt(curl.get(), option, value);
+	};
+	setOption(CURLOPT_URL, url.c_str());
+	setOption(CURLOPT_PORT, 21L);
+	setOption(CURLOPT_PROXY, "");
+	setOption(CURLOPT_USERNAME, "anonymous");
+	setOption(CURLOPT_PASSWORD, "anonymous@");
+	setOption(CURLOPT_FTPPORT, static_cast<const char*>(nullptr));
+	setOption(CURLOPT_FTP_USE_EPSV, 0L);
+	setOption(CURLOPT_WRITEFUNCTION, &writeServerFileList);
+	setOption(CURLOPT_WRITEDATA, &listing);
+	setOption(CURLOPT_CONNECTTIMEOUT, 10L);
+	setOption(CURLOPT_TIMEOUT, 120L);
+	setOption(CURLOPT_NOSIGNAL, 1L);
+	if (optionResult != CURLE_OK) {
+		qWarning() << "FTP directory listing configuration failed:" << curl_easy_strerror(optionResult);
+		return;
+	}
+	const CURLcode result = curl_easy_perform(curl.get());
+	if (result != CURLE_OK) {
+		qWarning() << "FTP directory listing failed:" << curl_easy_strerror(result)
+			<< "code:" << static_cast<int>(result);
+		return;
+	}
+
+	qInfo() << "FTP directory /md:/ (current level):";
+	std::istringstream lines(listing);
+	std::string line;
+	bool hasEntries = false;
+	while (std::getline(lines, line)) {
+		if (!line.empty() && line.back() == '\r')
+			line.pop_back();
+		if (line.empty())
+			continue;
+		qInfo().noquote() << QString::fromStdString(line);
+		hasEntries = true;
+	}
+	if (!hasEntries)
+		qInfo() << "(empty)";
 }

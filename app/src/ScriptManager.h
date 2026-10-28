@@ -44,6 +44,7 @@ signals:
 private:
 	int uploadScript(int index);
     int sendScriptReady();  //通知机器人脚本就绪
+	void printServerFileList();
 private:
 	std::string _scriptRootDir;
 	std::list<SrciptInfo> _scriptList;
