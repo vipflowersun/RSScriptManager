@@ -1,5 +1,4 @@
 #include "ScriptManager.h"
-#include "httplib.h"
 
 #include "nlohmann/json.hpp"
 
@@ -42,7 +41,8 @@ size_t readScript(char* buffer, size_t size, size_t count, void* userdata)
 ScriptManager::ScriptManager(QObject* parent)
     : QObject(parent)
 {
-	
+	_httpClient = std::make_unique<httplib::Client>("http://" + _robotFtp.robotIp);
+	_httpClient->set_keep_alive(true);
 }
 
 void ScriptManager::setScriptRootDir(const std::string& scriptRootDir)
@@ -71,6 +71,9 @@ std::string ScriptManager::getScriptRootDir() const
 void ScriptManager::setRobotFtp(const RobotFtp& robotFtp)
 {
 	_robotFtp = robotFtp;
+	_httpClient->stop();
+	_httpClient = std::make_unique<httplib::Client>("http://" + _robotFtp.robotIp);
+	_httpClient->set_keep_alive(true);
 }
 
 ScriptManager::RobotFtp ScriptManager::getRobotFtp() const
@@ -85,9 +88,7 @@ std::list<ScriptManager::SrciptInfo> ScriptManager::getScriptList() const
 
 int ScriptManager::isScriptRunning(bool& running) const
 {
-	std::string url = "http://" + _robotFtp.robotIp + "/COMET/rpc?func=IOVALRD&type=35&index=11";
-	httplib::Client client(url);
-	auto res = client.Get("/");
+	auto res = _httpClient->Get("/COMET/rpc?func=IOVALRD&type=35&index=11");
 	if (res && res->status == 200) {
 		try {
 			const auto json = nlohmann::json::parse(res->body);
@@ -229,10 +230,7 @@ int ScriptManager::uploadScript(int index)
 
 int ScriptManager::sendScriptReady()
 {
-	std::string url = "http://" + _robotFtp.robotIp + "/COMET/rpc?func=IOVALSET&type=35&index=10&value=1";
-
-	httplib::Client client(url);
-	auto res = client.Get("/");
+	auto res = _httpClient->Get("/COMET/rpc?func=IOVALSET&type=35&index=10&value=1");
 	if (res && res->status == 200) {
 		return 0;
 	}

@@ -6,6 +6,9 @@
 #include <list>
 #include <string>
 
+#include "httplib.h"
+
+
 class ScriptManager : public QObject
 {
     Q_OBJECT
@@ -45,4 +48,5 @@ private:
 	std::string _scriptRootDir;
 	std::list<SrciptInfo> _scriptList;
 	RobotFtp _robotFtp;
+	std::unique_ptr<httplib::Client> _httpClient;
 };

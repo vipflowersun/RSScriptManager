@@ -21,8 +21,8 @@ MainWindow::MainWindow(QWidget* parent)
 	_scriptManager->setRobotFtp(robotFtp);
 
 	QTimer* timer = new QTimer(this);
-	timer->setInterval(50);
-	//timer->start();
+	timer->setInterval(200);
+	timer->start();
 
     connect(_ui->btnReset, &QPushButton::clicked, this, [this]() {
 		QString dir = QFileDialog::getExistingDirectory(this, tr("Select Script Root Directory"), QString(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
