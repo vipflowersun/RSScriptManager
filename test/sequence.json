@@ -1,0 +1,24 @@
+[
+  {
+    "ls": [
+      "Robot_1/erract.ls"
+    ],
+    "js": []
+  },
+  {
+    "ls": [
+      "Robot_1/LX_W6P1S1SG_G1.ls"
+    ],
+    "js": [
+      "Robot_1/87657-1/87657-13-11.json"
+    ]
+  },
+  {
+    "ls": [
+      "Robot_1/LX_W6P2S1SG_G1.ls"
+    ],
+    "js": [
+      "Robot_1/87657-2/87657-23-11.json"
+    ]
+  }
+]
