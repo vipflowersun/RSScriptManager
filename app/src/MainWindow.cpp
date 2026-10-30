@@ -24,6 +24,21 @@ MainWindow::MainWindow(QWidget* parent)
 	timer->setInterval(200);
 	timer->start();
 
+	connect(_ui->btnStart, &QPushButton::clicked, this, [this]() {
+		qDebug() << _scriptManager->start();
+	});
+	connect(_ui->btnStop, &QPushButton::clicked, this, [this]() {
+		qDebug() << _scriptManager->stop();
+		});
+	connect(_ui->btnPause, &QPushButton::clicked, this, [this]() {
+		qDebug() << _scriptManager->pause();
+		});
+	connect(_ui->btnResume, &QPushButton::clicked, this, [this]() {
+		qDebug() << _scriptManager->resume();
+		});
+	connect(_ui->btnClear, &QPushButton::clicked, this, [this]() {
+		qDebug() << _scriptManager->clearAlarm();
+		});
     connect(_ui->btnReset, &QPushButton::clicked, this, [this]() {
 		QString dir = QFileDialog::getExistingDirectory(this, tr("Select Script Root Directory"), QString(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 		if (dir.isEmpty())
@@ -32,8 +47,8 @@ MainWindow::MainWindow(QWidget* parent)
 		auto scriptList = _scriptManager->getScriptList();
 		for (const auto& script : scriptList)
 		{
-			auto* item = new QListWidgetItem(QString::fromLocal8Bit(script.name.c_str()));
-			item->setData(Qt::UserRole, QString::fromLocal8Bit(script.name.c_str()));
+			auto* item = new QListWidgetItem(QString::fromLocal8Bit(script.lsName.c_str()));
+			item->setData(Qt::UserRole, QString::fromLocal8Bit(script.lsName.c_str()));
 			_ui->listScript->addItem(item);
 		}
     });

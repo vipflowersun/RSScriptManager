@@ -62,22 +62,52 @@ ScriptManager::ScriptManager(QObject* parent)
 	_httpClient->set_keep_alive(true);
 }
 
-void ScriptManager::setScriptRootDir(const std::string& scriptRootDir)
+int ScriptManager::setScriptRootDir(const std::string& scriptRootDir)
 {
 	_scriptRootDir = scriptRootDir;
 	if (!_scriptRootDir.empty() && _scriptRootDir.back() == '/')
 		_scriptRootDir.pop_back();
 
-	// only for test
-	_scriptList.clear();
-	if (_scriptRootDir.empty())
-		return;
+	// 找sequence.json
+	if (!std::filesystem::exists(_scriptRootDir + "/sequence.json"))
+		return -1;
 
-	for (const auto& entry : std::filesystem::directory_iterator(_scriptRootDir)) {
-		if (entry.is_regular_file() && entry.path().extension() == ".ls") {
-			_scriptList.push_back({ entry.path().filename().string(), 0 });
+	nlohmann::json sequenceJson = nlohmann::json::parse(std::ifstream(_scriptRootDir + "/sequence.json"));
+	if (sequenceJson.is_null() || !sequenceJson.is_array())
+		return -1;
+
+	for (const auto& scriptEntry : sequenceJson) {
+		if (!scriptEntry.is_object())
+			return -1;
+		if (!scriptEntry.contains("ls") || !scriptEntry["ls"].is_array() || scriptEntry["ls"].size() != 1)
+			return -1;
+		SrciptInfo info;
+		info.lsName = scriptEntry["ls"][0].get<std::string>();
+		if (scriptEntry.contains("js") && scriptEntry["js"].is_array()) {
+			for (const auto& jsName : scriptEntry["js"]) {
+				if (jsName.is_string())
+					info.jsNames.push_back(jsName.get<std::string>());
+			}
 		}
+		info.status = 0; // 初始状态为 idle
+		_scriptList.push_back(info);
 	}
+
+	return 0;
+
+	//// only for test
+	//_scriptList.clear();
+	//if (_scriptRootDir.empty())
+	//	return -1;
+
+	//for (const auto& entry : std::filesystem::directory_iterator(_scriptRootDir)) {
+	//	if (entry.is_regular_file() && entry.path().extension() == ".ls") {
+	//		SrciptInfo info;
+	//		info.lsName = entry.path().filename().string();
+	//		_scriptList.push_back(info);
+	//	}
+	//}
+	//return 0;
 }
 
 std::string ScriptManager::getScriptRootDir() const
@@ -134,6 +164,101 @@ std::optional<std::string> ScriptManager::getCurrentRunningScript() const
 	return std::nullopt;
 }
 
+int ScriptManager::start()
+{
+	auto res = _httpClient->Get("/COMET/rpc?func=RUN_TASK&task_name=LX_MAIN&cur_task_name=LX_MAIN&line_num=1&exec_type=PG_FWD_EXE_C&pause_on_shift=0&tp_motion=0&wait_type=1");
+	if (res && res->status == 200) {
+		try {
+			const auto json = nlohmann::json::parse(res->body);
+			const auto status = std::stoi(json.at("FANUC").at("RPC").at(0).at("status").get<std::string>(), nullptr, 16);
+			if (status != 0) {
+				return -1;
+			}
+			return 0;
+		}
+		catch (const nlohmann::json::exception&) {
+			return -1;
+		}
+	}
+	return -1;
+}
+
+int ScriptManager::stop()
+{
+	auto res = _httpClient->Get("/COMET/rpc?func=PGABORT&task_name=*ALL*");
+	if (res && res->status == 200) {
+		try {
+			const auto json = nlohmann::json::parse(res->body);
+			const auto status = std::stoi(json.at("FANUC").at("RPC").at(0).at("status").get<std::string>(), nullptr, 16);
+			if (status != 0) {
+				return -1;
+			}
+			return 0;
+		}
+		catch (const nlohmann::json::exception&) {
+			return -1;
+		}
+	}
+	return -1;
+}
+
+int ScriptManager::pause()
+{
+	auto res = _httpClient->Get("/comet/rpc?func=CPKCL&kcl_cmd=PAUSE%20ALL");
+	if (res && res->status == 200) {
+		try {
+			const auto json = nlohmann::json::parse(res->body);
+			const auto status = std::stoi(json.at("FANUC").at("RPC").at(0).at("status").get<std::string>(), nullptr, 16);
+			if (status != 0) {
+				return -1;
+			}
+			return 0;
+		}
+		catch (const nlohmann::json::exception&) {
+			return -1;
+		}
+	}
+	return -1;
+}
+
+int ScriptManager::resume()
+{
+	auto res = _httpClient->Get("COMET/rpc?func=RUN_TASK&task_name=LX_MAIN&cur_task_name=&line_num=0&exec_type=PG_FWD_EXE_C&pause_on_shift=0&tp_motion=0&wait_type=1");
+	if (res && res->status == 200) {
+		try {
+			const auto json = nlohmann::json::parse(res->body);
+			const auto status = std::stoi(json.at("FANUC").at("RPC").at(0).at("status").get<std::string>(), nullptr, 16);
+			if (status != 0) {
+				return -1;
+			}
+			return 0;
+		}
+		catch (const nlohmann::json::exception&) {
+			return -1;
+		}
+	}
+	return -1;
+}
+
+int ScriptManager::clearAlarm()
+{
+	auto res = _httpClient->Get("/comet/rpc?func=CPKCL&kcl_cmd=RESET");
+	if (res && res->status == 200) {
+		try {
+			const auto json = nlohmann::json::parse(res->body);
+			const auto status = std::stoi(json.at("FANUC").at("RPC").at(0).at("status").get<std::string>(), nullptr, 16);
+			if (status != 0) {
+				return -1;
+			}
+			return 0;
+		}
+		catch (const nlohmann::json::exception&) {
+			return -1;
+		}
+	}
+	return -1;
+}
+
 int ScriptManager::runAll()
 {
 	return 0;
@@ -141,39 +266,33 @@ int ScriptManager::runAll()
 
 int ScriptManager::runCertainScript(int index)
 {
-	int err = this->uploadScript(index);
-	if (err)
-		return err;
-
-	err = this->sendScriptReady();
-	if (err)
-		return err;
-
-	return 0;
-}
-
-int ScriptManager::pause()
-{
-	return 0;
-}
-
-int ScriptManager::stop()
-{
-	return 0;
-}
-
-int ScriptManager::uploadScript(int index)
-{
 	if (index < 0 || index >= static_cast<int>(_scriptList.size()))
+		return -1;
+
+	auto it = std::next(_scriptList.begin(), index);
+
+	const std::string lsPath = _scriptRootDir + "/" + it->lsName;
+	int err = this->uploadScript(lsPath);
+	if (err)
+		return err;
+
+	if (int err = this->sendScriptReady())
+		return err;
+
+	return 0;
+}
+
+int ScriptManager::uploadScript(const std::string& scriptDir)
+{
+	if (!std::filesystem::exists(scriptDir))
 		return -1;
 	if (_robotFtp.robotIp.empty()) {
 		qWarning() << "FTP upload failed: robot IP is empty";
 		return -1;
 	}
 
-	std::string scriptPath = _scriptRootDir + "/" + std::next(_scriptList.begin(), index)->name;
 	ScriptUploadSource source;
-	source.stream.open(std::filesystem::path(scriptPath), std::ios::binary | std::ios::ate);
+	source.stream.open(std::filesystem::path(scriptDir), std::ios::binary | std::ios::ate);
 	if (!source.stream) {
 		qWarning() << "FTP upload failed: cannot open script";
 		return -1;
@@ -197,7 +316,7 @@ int ScriptManager::uploadScript(int index)
 		qWarning() << "FTP upload failed: cannot create curl handle";
 		return -1;
 	}
-	const auto& filename = std::next(_scriptList.begin(), index)->name;
+	const auto& filename = std::filesystem::path(scriptDir).filename().string();
 	if (filename.size() > static_cast<size_t>(std::numeric_limits<int>::max()))
 		return -1;
 	std::unique_ptr<char, decltype(&curl_free)> encodedName(

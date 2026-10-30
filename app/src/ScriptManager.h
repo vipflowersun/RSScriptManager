@@ -20,29 +20,35 @@ public:
 	};
 	struct SrciptInfo
 	{
-		std::string name;  // 不带路径的脚本名
+		std::string lsName;  // 不带路径的脚本文件名
+		std::list<std::string> jsNames;  // 不带路径的参数文件名
 		int status; // 0: idle, 1: running, 2: runned, 3: error
 	};
 public:
     explicit ScriptManager(QObject* parent = nullptr);
     ~ScriptManager() = default;
 public:
-    void setScriptRootDir(const std::string& scriptRootDir);
+    int setScriptRootDir(const std::string& scriptRootDir);
     std::string getScriptRootDir() const;
 	void setRobotFtp(const RobotFtp& robotFtp);
 	RobotFtp getRobotFtp() const;
 	std::list<SrciptInfo> getScriptList() const;
     int isScriptRunning(bool& running) const;
 	std::optional<std::string> getCurrentRunningScript() const;
+	int start();
+	int stop();
+	int pause();
+	int resume();
+	int clearAlarm();
 	int runAll();
 	int runCertainScript(int index);
-	int pause();
-	int stop();
+	void runCAM_GW(int wpNum);
 signals:
 	void statusChanged(int status);  // 0: idle, 1: running, 2: error
 	void scriptListStatusChanged();
+	void CAM_GWDone(int errorCode);  //初定位完成
 private:
-	int uploadScript(int index);
+	int uploadScript(const std::string& scriptDir);
     int sendScriptReady();  //通知机器人脚本就绪
 	void printServerFileList();
 private:
