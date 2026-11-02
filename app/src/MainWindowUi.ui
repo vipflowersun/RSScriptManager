@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>366</width>
+    <width>419</width>
     <height>477</height>
    </rect>
   </property>
@@ -163,14 +163,14 @@
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_2">
+      <widget class="QLabel" name="label_3">
        <property name="text">
-        <string>PCIP</string>
+        <string>CAM_GWScript</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="editPCIP">
+      <widget class="QLineEdit" name="editCAM_GWScript">
        <property name="minimumSize">
         <size>
          <width>0</width>
@@ -184,7 +184,26 @@
         </size>
        </property>
        <property name="text">
-        <string>127.0.0.1</string>
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnSetCAM_GWScript">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>32</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>32</width>
+         <height>32</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>...</string>
        </property>
       </widget>
      </item>
@@ -246,6 +265,25 @@
        </property>
        <property name="text">
         <string>RunSelect</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnRunCAM_GW">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>32</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>32</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>RunCAM_GW</string>
        </property>
       </widget>
      </item>

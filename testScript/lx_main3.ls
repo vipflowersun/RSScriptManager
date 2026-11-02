@@ -45,7 +45,7 @@ MPAS_STATUS_PASS       : 0;
   13:  F[10:ON ]=(OFF) ;
   14:  F[11:OFF]=(ON) ;
   15:  ! 执行子程序 ;
-  16:  CALL DELAY ;
+  16:  CALL LS_TASK_RUN ;
   17:  ! 子程序执行完成，清除运行中标志 ;
   18:  F[11:OFF]=(OFF) ;
   19:  JMP LBL[10] ;

@@ -15,14 +15,12 @@ MainWindow::MainWindow(QWidget* parent)
 
 	_scriptManager = new ScriptManager(this);
 
-	ScriptManager::RobotFtp robotFtp;
-	robotFtp.robotIp = _ui->editRobotIP->text().toStdString();
-	robotFtp.IPCIp = _ui->editPCIP->text().toStdString();
-	_scriptManager->setRobotFtp(robotFtp);
+	std::string robotIp = _ui->editRobotIP->text().toStdString();
+	_scriptManager->setRobotIp(robotIp);
 
 	QTimer* timer = new QTimer(this);
 	timer->setInterval(200);
-	timer->start();
+	//timer->start();
 
 	connect(_ui->btnStart, &QPushButton::clicked, this, [this]() {
 		qDebug() << _scriptManager->start();
@@ -44,7 +42,8 @@ MainWindow::MainWindow(QWidget* parent)
 		if (dir.isEmpty())
 			return;
 		_scriptManager->setScriptRootDir(dir.toLocal8Bit().constData());
-		auto scriptList = _scriptManager->getScriptList();
+		std::list<ScriptManager::SrciptInfo> scriptList;
+		_scriptManager->getScriptList(scriptList);
 		for (const auto& script : scriptList)
 		{
 			auto* item = new QListWidgetItem(QString::fromLocal8Bit(script.lsName.c_str()));
@@ -52,23 +51,25 @@ MainWindow::MainWindow(QWidget* parent)
 			_ui->listScript->addItem(item);
 		}
     });
+	connect(_ui->btnSetCAM_GWScript, &QPushButton::clicked, this, [this]() {
+		QString dir = QFileDialog::getOpenFileName(this, tr("Select CAM_GW Script Directory"), "./", tr("Script Files (*.ls)"));
+		if (dir.isEmpty())
+			return;
+		_ui->editCAM_GWScript->setText(dir);
+		_scriptManager->setCAM_GWScriptDir(dir.toLocal8Bit().constData());
+		});
 	connect(_ui->btnRunSelect, &QPushButton::clicked, this, [this]() {
 		int index = _ui->listScript->currentRow();
 		if (index < 0)
 			return;
 		qDebug() << "runCertainScript: " << _scriptManager->runCertainScript(index);
 	});
+	connect(_ui->btnRunCAM_GW, &QPushButton::clicked, this, [this]() {
+		qDebug() << "runCAM_GW: " << _scriptManager->runCAM_GW(0);
+		});
 	connect(_ui->editRobotIP, &QLineEdit::editingFinished, this, [this]() {
-		ScriptManager::RobotFtp robotFtp;
-		robotFtp.robotIp = _ui->editRobotIP->text().toStdString();
-		robotFtp.IPCIp = _ui->editPCIP->text().toStdString();
-		_scriptManager->setRobotFtp(robotFtp);
-	});
-	connect(_ui->editPCIP, &QLineEdit::editingFinished, this, [this]() {
-		ScriptManager::RobotFtp robotFtp;
-		robotFtp.robotIp = _ui->editRobotIP->text().toStdString();
-		robotFtp.IPCIp = _ui->editPCIP->text().toStdString();
-		_scriptManager->setRobotFtp(robotFtp);
+		std::string robotIp = _ui->editRobotIP->text().toStdString();
+		_scriptManager->setRobotIp(robotIp);
 	});
 	connect(timer, &QTimer::timeout, this, [this]() {
 		bool running = false;
