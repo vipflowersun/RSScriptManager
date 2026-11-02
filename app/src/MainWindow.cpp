@@ -20,7 +20,7 @@ MainWindow::MainWindow(QWidget* parent)
 
 	QTimer* timer = new QTimer(this);
 	timer->setInterval(200);
-	//timer->start();
+	timer->start();
 
 	connect(_ui->btnStart, &QPushButton::clicked, this, [this]() {
 		qDebug() << _scriptManager->start();
